@@ -1,40 +1,84 @@
+Create a new Rails 5 project.
+
+```
 rails new rabbit --skip-spring
+```
 
+Add devise gem to Gemfile.
 
+```ruby
 gem 'devise', :github => 'plataformatec/devise', :branch => 'master'
+```
 
+Run:
+
+```
 bundle
+```
 
+Run devise generator:
+
+```
 rails generate devise:install
+```
 
-in config/environments/development.rb:
+Add the mailer url in config/environments/development.rb:
 
+```ruby
 config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }
+```
 
+Add the root url in routes.rb:
+
+```ruby
 root to: "links#index"
+```
 
-In layout file:
+Create user model that will be used for authentication by devise.
 
-<p class="notice"><%= notice %></p>
-<p class="alert"><%= alert %></p>
-
+```
 rails g devise user
+```
+
+Migrate the database.
+
+```
 rails db:migrate
+```
+
+Copy the views provided devise to our project so that we can customize it.
+
+```
 rails g devise:views
-	     
+```
+
+Create the link model with string fields title and url. It also has a user_id foreign key.
+
+```
 rails g model link title url user:references
+```
 
+Add the relationship declaration to user model.
 
-User 
-
+```ruby
 has_many :links
+```
 
-Link
+Add the relationship declaration to link model.
 
+```ruby
 belongs_to :user
+```
 
-devise_for :users in routes provides:
+Add the devise routes to routes.rb:
 
+```ruby
+devise_for :users 
+```
+
+This provides the following routes:
+
+```
                   Prefix Verb   URI Pattern                    Controller#Action
         new_user_session GET    /users/sign_in(.:format)       devise/sessions#new
             user_session POST   /users/sign_in(.:format)       devise/sessions#create
@@ -51,15 +95,23 @@ cancel_user_registration GET    /users/cancel(.:format)        devise/registrati
                          PATCH  /users(.:format)               devise/registrations#update
                          PUT    /users(.:format)               devise/registrations#update
                          DELETE /users(.:format)               devise/registrations#destroy
+```
 
-This is the output of rails routes.
+This is the output of rails routes. Add the link resource to routes.
 
-Add resources :links to routes.
+```ruby
+resources :links
+```
 
+Create a links controller.
+
+```
 rails g controller links
+```
 
-Links controller:
+Links controller looks like this:
 
+```ruby
 class LinksController < ApplicationController
   before_action :set_link, only: [:show, :edit, :update, :destroy]
   before_action :authenticate_user!, except: [:index, :show]
@@ -141,14 +193,15 @@ class LinksController < ApplicationController
       params.require(:link).permit(:title, :url)
     end
 end
+```
 
-form partial:
+Create the link form partial:
 
+```rhtml
 <%= form_for(@link) do |f| %>
   <% if @link.errors.any? %>
     <div id="error_explanation">
       <h2><%= pluralize(@link.errors.count, "error") %> prohibited this link from being saved:</h2>
-
       <ul>
       <% @link.errors.full_messages.each do |message| %>
         <li><%= message %></li>
@@ -169,40 +222,43 @@ form partial:
   <div class="form-group">
     <%= f.submit "Submit", class: "btn btn-lg btn-primary" %>
   </div>
-
 <% end %>
+```
 
-edit.html.erb:
+Create links/edit.html.erb:
 
+```rhtml
 <h1>Editing link</h1>
-
 <%= render 'form' %>
 
 <%= link_to 'Show', @link %> |
 <%= link_to 'Back', links_path %>
+```
 
-index.html.erb:
+Create links/index.html.erb:
 
+```rhtml
 <% @links.each do |link| %>
   <div class="link row clearfix">
     <h2>
       <%= link_to link.title, link %><br>
       <small class="author">Submitted <%= time_ago_in_words(link.created_at) %> by <%= link.user.name %></small>
     </h2>
-
   </div>
 <% end %>
+```
 
-new.html.erb:
+Create the links/new.html.erb:
 
+```rhtml
 <h1>Submit New link</h1>
-
 <%= render 'form' %>
-
 <%= link_to 'Back', links_path %>
+```
 
-show.html.erb:
+Create the links/show.html.erb:
 
+```rhtml
 <div class="page-header">
   <h1><a href="<%= @link.url %>"><%= @link.title %></a><br> <small>Submitted by <%= @link.user.name %></small></h1>
 </div>
@@ -217,20 +273,38 @@ show.html.erb:
 		<%= link_to 'Destroy', @link, method: :delete, data: { confirm: 'Are you sure?' }, class: "btn btn-default" %>
 	</div>
 <% end %>
+```
 
+Add name field to the users table.
+
+```
 rails g migration add_name_to_users name
+```
+
+Migrate the database.
+
+```
 rails db:migrate
+```
+
+Start the rails server.
+
+```
 rails s
+```
 
-You can submit links. To add the name, change devise/registrations/new.html.erb:
+You can now submit links. To add the name, change devise/registrations/new.html.erb:
 
+```rhtml
 <div class="field">
   <%= f.label :name %><br />
   <%= f.text_field :name, autofocus: true %>
 </div>
+```
 
 Still the name is not populated when the link is displayed. To fix it, in application controller, add:
 
+```ruby
 before_filter :configure_permitted_parameters, if: :devise_controller?
 
 protected
@@ -239,37 +313,62 @@ def configure_permitted_parameters
   devise_parameter_sanitizer.for(:sign_up) << :name
   devise_parameter_sanitizer.for(:account_update) << :name
 end
+```
 
+This gives the:
+
+```
 undefined method `for' for #<Devise::ParameterSanitizer
+```
 
+Change the implementation as follows:
+
+```ruby
 def configure_permitted_parameters
   devise_parameter_sanitizer.permit(:sign_up, keys: :name)
   devise_parameter_sanitizer.permit(:account_update, keys: :name)
 end
+```
 
+This results in:
+
+```
 no implicit conversion of Symbol into Array
+```
 
+Change the implementation as follows:
+
+```ruby
 def configure_permitted_parameters
   devise_parameter_sanitizer.permit(:sign_up, keys: [:name])
   devise_parameter_sanitizer.permit(:account_update, keys: [:name])
 end
+```
 
-You can now display the user name of the submitted link.
+You can now display the user name of the submitted link. Add bootstrap gem to Gemfile.
 
+```ruby
 gem 'bootstrap', '~> 4.0.0.alpha3'
+```
 
+Run:
+
+```
 bundle
+```
 
 Within the head tag of the application layout, add:
 
+```html
 <!-- Required meta tags always come first -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta http-equiv="x-ua-compatible" content="ie=edge">
+```
 
+Add navigation bar within body tag in application layout:
 
-Navigation bar within body tag in application layout:
-
+```rhtml
 <nav class="navbar navbar-light bg-faded">
   <%= link_to 'Rabbit', root_path, class: 'navbar-brand' %>
   <ul class="nav navbar-nav">
@@ -297,9 +396,11 @@ Navigation bar within body tag in application layout:
       <button class="btn btn-success-outline" type="submit">Search</button>
     </form>
 </nav>
+```
 
-Change field to form-group in devise/registrations/new.html.erb:
+Change field class to form-group in devise/registrations/new.html.erb:
 
+```rhtml
 <div class="form-group">
   <%= f.label :name %><br />
   <%= f.text_field :name, autofocus: true %>
@@ -326,21 +427,26 @@ Change field to form-group in devise/registrations/new.html.erb:
 <div class="actions">
   <%= f.submit "Sign up", class: 'btn btn-primary' %>
 </div>
+```
 
 To make the text field size reasonable, change the class in application layout:
 
+```rhtml
 <div id="content" class="col-md-4 center-block">
   <%= yield %>
 </div>
-
+```
 
 Change the style of edit and destroy buttons by adding the classes link/show.html.erb.
 
+```rhtml
 <%= link_to 'Edit', edit_link_path(@link), class: "btn btn-secondary" %>
 <%= link_to 'Destroy', @link, method: :delete, data: { confirm: 'Are you sure?' }, class: "btn btn-danger" %>
+```
 
-Make the submitted by small case and group buttons.
+Make the `submitted by` small case and group buttons.
 
+```rhtml
 <div>
   <h3><a href="<%= @link.url %>"><%= @link.title %></a><br> <small>Submitted by <%= @link.user.name %></small></h3>
 </div>
@@ -355,9 +461,11 @@ Make the submitted by small case and group buttons.
 		<%= link_to 'Destroy', @link, method: :delete, data: { confirm: 'Are you sure?' }, class: "btn btn-danger" %>
 	</div>
 <% end %>
+```
 
 The outer div should be main_content and the yield should be within the content like this:
 
+```rhtml
 <div id="main_content" class="container">
   <% flash.each do |name, msg| %>
 	<%= content_tag(:div, msg, class: "alert alert-info") %>
@@ -367,16 +475,20 @@ The outer div should be main_content and the yield should be within the content 
 	  <%= yield %>
   </div>
 </div>
+```
 
 Reload the page, you will see the links centered, styled and separated by lines. Remove the back link the new link submission form and add Back button to the form partial:
 
+```rhtml
 <div class="form-group">
   <%= f.submit "Submit", class: "btn btn-lg btn-primary" %>
   <%= link_to 'Back', links_path, class: 'btn btn-lg btn-secondary' %>
 </div>
+```
 
-Let's style the edit account page (http://localhost:3000/users/edit). Add form-group and form-control to registrations/edit.html.erb. Use card and card-block classes.
+Let's style the edit account page (`http://localhost:3000/users/edit`). Add form-group and form-control to registrations/edit.html.erb. Use card and card-block classes.
 
+```rhtml
 <h2>Edit <%= resource_name.to_s.humanize %></h2>
 
 <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { method: :put }) do |f| %>
@@ -418,7 +530,6 @@ Let's style the edit account page (http://localhost:3000/users/edit). Add form-g
 	  </div>
 	 </div>
   </div>
-  
 <% end %>
 
 <div class='card-footer'>
@@ -430,26 +541,52 @@ Let's style the edit account page (http://localhost:3000/users/edit). Add form-g
 </div>
 <hr/>
 <%= link_to "Back", :back, class: 'btn btn-lg btn-secondary' %>
+```
 
+Add `acts_as_votable` gem to Gemfile.
+
+```ruby
 gem 'acts_as_votable'
+```
 
+Run:
+
+```
 bundle
+```
 
+Create the votes table.
+
+```
 rails g acts_as_votable:migration
+```
 
+Migrate the database.
+
+```
 rails db:migrate
+```
 
-Add acts_as_votable to Link model.
+Add 
 
+```ruby
+acts_as_votable
+```
+
+to Link model. Define route to like and dislike in routes.rb.
+
+```ruby
 resources :links do
   member do
     put 'like', to: 'links#upvote'
     put 'dislike', to: 'links#downvote'
   end
 end
- 
+```
+
 Implement upvote and downvote actions in links controller.
 
+```ruby
 def upvote
   @link = Link.find(params[:id])  
   @link.upvote_by current_user
@@ -463,18 +600,17 @@ def downvote
   
   redirect_to :back
 end
+```
 
-Checkout [How to build a Pinterest Clone in Rails 5](https://rubyplus.com/articles/4041-How-to-build-a-Pinterest-Clone-in-Rails-5 'How to build a Pinterest Clone in Rails 5') to see how to get glyphicons to work with bootstrap 4.
+Checkout [How to build a Pinterest Clone in Rails 5](https://rubyplus.com/articles/4041-How-to-build-a-Pinterest-Clone-in-Rails-5 'How to build a Pinterest Clone in Rails 5') to see how to get glyphicons to work with bootstrap 4. To display upvote and downvote glyphicons using font awesome, change the links/index.html.erb:
 
-Display upvote and downvote glyphicons using font awesome.
-
+```rhtml
 <% @links.each do |link| %>
   <div class="link row clearfix">
     <h3>
       <%= link_to link.title, link %><br>
       <small>Submitted <%= time_ago_in_words(link.created_at) %> by <%= link.user.name %></small>
     </h3>
-	
 	<div class='btn-group'>
 	  <%= link_to 'Visit Link', link.url, class: 'btn btn-secondary' %> 
 	  <%= link_to like_link_path(link), method: :put, class: 'btn btn-secondary' do %>
@@ -488,12 +624,13 @@ Display upvote and downvote glyphicons using font awesome.
 		<%= link.get_downvotes.size %>
 	  <% end %>
 	</div>
-	
   </div>
 <% end %>
+```
 
 Add voting links to the bottom of the link show page.
 
+```rhtml
 <div class='btn-group pull-right'>
   <%= link_to like_link_path(@link), method: :put, class: 'btn btn-secondary btn-sm' do %>
     <span class='fa fa-arrow-up'></span>	
@@ -506,25 +643,49 @@ Add voting links to the bottom of the link show page.
   <%= @link.get_downvotes.size %>
   <% end %>
 </div>
+```
 
 Change the width to accomodate all buttons by changing the class in application layout file:
 
+```rhtml
 <div id="content" class="col-md-9 center-block">
   <%= yield %>
 </div>
+```
 
+Generate the comment model.
 
+```
 rails g scaffold comment link_id:integer:index body:text user:references --skip-stylesheets
+```
 
+Migrate the database.
+
+```
 rails db:migrate
+```
 
-Link   has_many :comments
+Define the relationship between link and comments in the link model.
+
+```ruby
+has_many :comments
+```
+
+Define the relationship between comment and link in the comment model.
+
+```ruby
 Comment   belongs_to :link
+```
 
-In routes:
+In routes, add:
 
-resources :comments inside the link resource, like this:
+```ruby
+resources :comments 
+```
 
+inside the link resource, like this:
+
+```ruby
 resources :links do
   member do
     put 'like', to: 'links#upvote'
@@ -532,10 +693,11 @@ resources :links do
   end
   resources :comments
 end
-
+```
   
 Add comment section to link show page.
 
+```rhtml
 <h3 class='comments_title'>
   <%= pluralize(@link.comments.count, 'Comment') %>
 </h3>
@@ -554,9 +716,11 @@ Add comment section to link show page.
   	<%= f.submit 'Add Comment', class: 'btn btn-primary' %>
   </div>
 <% end %>
+```
 
 Delete unnecessary actions in comments controller and customize the create and destroy actions.
 
+```ruby
 class CommentsController < ApplicationController
   before_action :set_comment, only: [:show, :edit, :update, :destroy]
   before_action :authenticate_user!
@@ -596,9 +760,11 @@ class CommentsController < ApplicationController
       params.require(:comment).permit(:link_id, :body, :user_id)
     end
 end
+```
 
 Create comments/_comment.html.erb:
 
+```rhtml
 <div id="comment_#{comment.id}" class='comment'>
   <div class="comments_wrapper clearfix">
     <div class="pull-left">
@@ -613,24 +779,28 @@ Create comments/_comment.html.erb:
 	</div>
   </div>
 </div>
-
+```
 
 Display name in the edit account page.
 
+```rhtml
 <div class="form-group">
   <%= f.label :name %><br />
   <%= f.text_field :name, autofocus: true, class: 'form-control' %>
 </div>
+```
 
 We can update the name because of this:
 
+```rhtml
 configure_permitted_parameters
+```
 
+## Summary
 
+In this article, you learned how to create a reddit clone using Rails 5, font awesome, devise and Twitter Bootstrap 4.
 
-
-
-
+## References
 
 [FontAwesome Cheatsheet](http://fontawesome.io/cheatsheet/ 'FontAwesome Cheatsheet')
 [Migrating to v4](http://v4-alpha.getbootstrap.com/migration/ 'Migrating to v4') 
@@ -638,5 +808,4 @@ configure_permitted_parameters
 
 
 Remove the panel and panel related classes in Pinterest clone and add card and card related classes instead.
-
 
