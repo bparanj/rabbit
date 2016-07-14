@@ -1,5 +1,12 @@
 Create a new Rails 5 project.
 
+## Libraries Used
+
+- Devise
+- Twitter Bootstrap 4
+- Acts as Votable
+- Font Awesome Icons
+
 ```
 rails new rabbit --skip-spring
 ```
