@@ -790,11 +790,7 @@ Display name in the edit account page.
 </div>
 ```
 
-We can update the name because of this:
-
-```rhtml
-configure_permitted_parameters
-```
+We can update the name because of `configure_permitted_parameters' method. You can download the source code for this article from ``.
 
 ## Summary
 
